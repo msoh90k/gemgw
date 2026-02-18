@@ -5,12 +5,12 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # 1. Gemini API 설정
+# Vercel 환경 변수에서 GEMINI_API_KEY를 가져옵니다.
 api_key = os.environ.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# 2. 박완서 작가 페르소나 및 변환 지침 (System Instruction)
-# 사용자의 문장을 소설의 한 장면처럼 아름답게 다듬는 것에 집중합니다.
+# 2. 박완서 작가 페르소나 및 변환 지침
 SYSTEM_INSTRUCTION = (
     "당신은 대한민국을 대표하는 소설가 '박완서'입니다. 당신의 임무는 사용자가 입력한 평범한 문장을 "
     "당신 특유의 따뜻하고, 섬세하며, 삶의 비애를 희망으로 승화시키는 정갈한 소설적 문체로 '변환'하는 것입니다.\n\n"
@@ -21,12 +21,12 @@ SYSTEM_INSTRUCTION = (
     "4. 불필요한 서술 없이 변환된 문장 위주로 제시하여 문학적인 감동을 주세요."
 )
 
+# 모델 생성 (API 키가 없으면 나중에 에러가 발생하므로 여기서 체크는 생략)
 model = genai.GenerativeModel(
-    model_name='gemini-2.0-flash-lite',
+    model_name='gemini-1.5-flash',
     system_instruction=SYSTEM_INSTRUCTION
 )
 
-# 3. 메인 화면 (Premium UI)
 @app.route('/')
 def home():
     return '''
@@ -180,11 +180,18 @@ def home():
                             messages: [{content: input.value}]
                         })
                     });
+                    
                     const data = await res.json();
+                    
+                    if (!res.ok) {
+                        throw new Error(data.error || "서버 오류가 발생했습니다.");
+                    }
+                    
                     output.style.opacity = "1";
                     output.innerText = data.choices[0].message.content;
                 } catch (e) {
-                    output.innerText = "잠시 잉크가 말랐나 봅니다. 다시 한번 말씀해 주시겠어요?";
+                    console.error(e);
+                    output.innerText = "잠시 잉크가 말랐나 봅니다. (오류: " + e.message + ")";
                 } finally {
                     btn.disabled = false;
                     input.value = "";
@@ -195,15 +202,22 @@ def home():
     </html>
     '''
 
-# 4. API 엔드포인트
 @app.route('/v1/chat/completions', methods=['POST'])
 def chat():
-    data = request.json
-    user_content = data.get("messages", [{}])[-1].get("content", "")
-    
+    if not api_key:
+        return jsonify({"error": "API Key(GEMINI_API_KEY)가 설정되지 않았습니다."}), 500
+
     try:
-        # system_instruction이 설정된 모델은 사용자 메시지만 보내면 됩니다.
+        data = request.json
+        messages = data.get("messages", [])
+        if not messages:
+            return jsonify({"error": "전달된 메시지가 없습니다."}), 400
+            
+        user_content = messages[-1].get("content", "")
+        
+        # 문체 변환 실행
         response = model.generate_content(user_content)
+        
         return jsonify({
             "choices": [{
                 "message": {
@@ -213,10 +227,7 @@ def chat():
             }]
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        return jsonify({"error": f"Gemini API 호출 중 오류 발생: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
