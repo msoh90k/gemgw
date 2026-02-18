@@ -230,4 +230,5 @@ def chat():
         return jsonify({"error": f"Gemini API 호출 중 오류 발생: {str(e)}"}), 500
 
 if __name__ == '__main__':
+    # API 키 업데이트 트리거를 위한 주석
     app.run(debug=True)
