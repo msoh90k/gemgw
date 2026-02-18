@@ -90,7 +90,20 @@ def home():
                 padding: 20px;
                 background: #fbfaf8;
                 border-left: 3px solid var(--accent-color);
-                transition: opacity 0.5s ease;
+                transition: all 0.5s ease;
+                cursor: pointer;
+            }
+            #output-area:hover {
+                background: #f4f1ea;
+            }
+            .copy-hint {
+                font-size: 0.75rem;
+                color: var(--accent-color);
+                text-align: right;
+                margin-top: -25px;
+                margin-bottom: 25px;
+                font-family: 'Noto Sans KR', sans-serif;
+                display: none;
             }
             .input-wrapper {
                 position: relative;
@@ -135,6 +148,7 @@ def home():
                 color: #9e9e9e;
                 text-align: center;
                 font-family: 'Nanum Myeongjo', serif;
+                line-height: 1.4;
             }
             .loading-dots:after {
                 content: ' .';
@@ -151,25 +165,43 @@ def home():
     <body>
         <div class="container">
             <h1>박완서의 서재</h1>
-            <div id="output-area">"어떤 마음의 조각을 꺼내놓으시겠어요? 제가 고운 결로 다듬어 드릴게요."</div>
+            <div id="output-area" onclick="copyText()">"어떤 마음의 조각을 꺼내놓으시겠어요? 제가 고운 결로 다듬어 드릴게요."</div>
+            <div id="copy-hint" class="copy-hint">문장을 클릭하면 갈피(복사)에 담깁니다.</div>
             
             <div class="input-wrapper">
                 <textarea id="userInput" placeholder="변환하고 싶은 문장을 입력하세요..."></textarea>
                 <button id="sendBtn" onclick="transform()">문체 변환하기</button>
             </div>
         </div>
-        <div class="footer">삶의 비애를 희망으로 승화시킨 작가, 박완서의 문체로 기록합니다.</div>
+        <div class="footer">
+            삶의 비애를 희망으로 승화시킨 소설가 박완서<br>
+            그녀의 따뜻한 문체로 당신의 오늘을 기록합니다.
+        </div>
 
         <script>
+            function copyText() {
+                const area = document.getElementById('output-area');
+                const text = area.innerText;
+                if (text.includes("어떤 마음의 조각") || text.includes("원고지에")) return;
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    const original = area.innerText;
+                    area.innerText = "갈피에 잘 담아두었습니다. (복사 완료)";
+                    setTimeout(() => { area.innerText = original; }, 1000);
+                });
+            }
+
             async function transform() {
                 const input = document.getElementById('userInput');
                 const output = document.getElementById('output-area');
+                const hint = document.getElementById('copy-hint');
                 const btn = document.getElementById('sendBtn');
                 
                 if(!input.value.trim()) return;
 
                 output.style.opacity = "0.5";
                 output.innerHTML = '<span class="loading-dots">원고지에 문장을 옮겨 적는 중입니다</span>';
+                hint.style.display = "none";
                 btn.disabled = true;
 
                 try {
@@ -189,6 +221,7 @@ def home():
                     
                     output.style.opacity = "1";
                     output.innerText = data.choices[0].message.content;
+                    hint.style.display = "block";
                 } catch (e) {
                     console.error(e);
                     output.innerText = "잠시 잉크가 말랐나 봅니다. (오류: " + e.message + ")";
