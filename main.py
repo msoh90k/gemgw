@@ -21,9 +21,9 @@ SYSTEM_INSTRUCTION = (
     "4. 불필요한 서술 없이 변환된 문장 위주로 제시하여 문학적인 감동을 주세요."
 )
 
-# 모델 생성 (API 키가 없으면 나중에 에러가 발생하므로 여기서 체크는 생략)
+# 모델 생성
 model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
+    model_name='gemini-flash-lite-latest',
     system_instruction=SYSTEM_INSTRUCTION
 )
 
